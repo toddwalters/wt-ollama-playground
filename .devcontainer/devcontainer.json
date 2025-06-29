@@ -5,9 +5,9 @@
   "remoteEnv": {
     "OLLAMA_API_BASE_URL": "http://host.docker.internal:11434"
   },
-  "mounts": [
-    "source=${localWorkspaceFolder}/models,target=/workspace/models,type=bind"
-  ],
+//  "mounts": [
+//    "source=${localWorkspaceFolder}/models,target=/workspace/models,type=bind"
+//  ],
   "customizations": {
     "vscode": {
       "extensions": [
