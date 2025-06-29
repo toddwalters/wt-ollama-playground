@@ -1,0 +1,10 @@
+jupyterlab
+langchain
+llama-index
+chromadb
+sentence-transformers
+openai
+requests
+tiktoken
+matplotlib
+python-dotenv
