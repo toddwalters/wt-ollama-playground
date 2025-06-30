@@ -2,9 +2,6 @@
   "name": "ollama-genai-env",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
   "forwardPorts": [11434],
-  "remoteEnv": {
-    "OLLAMA_API_BASE_URL": "http://host.docker.internal:11434"
-  },
   "runArgs": ["--env-file", ".env"],
   "mounts": [
     "source=${localWorkspaceFolder}/models,target=/workspace/models,type=bind"
