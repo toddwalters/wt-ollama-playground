@@ -2,7 +2,8 @@
   "name": "ollama-genai-env",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
   "features": {
-    "ghcr.io/devcontainers/features/dotenv:1": {}
+    // "ghcr.io/devcontainers/features/dotenv:1": {}
+    "devcontainers/features/dotenv:1"
   },
   "forwardPorts": [11434],
   // "remoteEnv": {
