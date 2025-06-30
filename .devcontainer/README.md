@@ -186,6 +186,197 @@ For a simpler approach, you can use the macOS Application Firewall:
 
 This approach is less granular but easier to manage for basic security needs.
 
+## Open WebUI Integration
+
+### What is Open WebUI?
+
+Open WebUI is a feature-rich and user-friendly web interface designed to operate entirely offline. It supports various LLM runners, including Ollama and OpenAI-compatible APIs. Key features include:
+
+- **ChatGPT-Style Interface**: Familiar chat interface for interacting with LLMs
+- **Model Management**: Easy switching between different models
+- **Multi-User Support**: Admin controls and user management
+- **Offline Operation**: Complete privacy with local data storage
+- **Extensible**: Plugin support and customization options
+
+### Prerequisites for Open WebUI
+
+1. **Docker** - Must be installed and running
+2. **Ollama Server** - Running and accessible (either locally or on network)
+3. **Network Access** - If connecting to a remote Ollama server
+
+### Installation and Configuration
+
+#### Step 1: Pull the Open WebUI Docker Image
+
+```bash
+docker pull ghcr.io/open-webui/open-webui:main
+```
+
+#### Step 2: Deploy Open WebUI Container
+
+**For Remote Ollama Server (Recommended Setup):**
+
+Use this command to connect Open WebUI to a remote Ollama server:
+
+```bash
+docker run -d \
+  -p 3000:8080 \
+  -e WEBUI_AUTH=False \
+  -e OLLAMA_BASE_URL=https://192.168.1.11:11434 \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  ghcr.io/open-webui/open-webui:main
+```
+
+**For Local Ollama Server:**
+
+If Ollama is running on the same machine as Open WebUI:
+
+```bash
+docker run -d \
+  -p 3000:8080 \
+  -e WEBUI_AUTH=False \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  ghcr.io/open-webui/open-webui:main
+```
+
+#### Step 3: Access Open WebUI
+
+After the container is running, access Open WebUI at:
+- **Local Access**: [http://localhost:3000](http://localhost:3000)
+- **Network Access**: `http://YOUR_HOST_IP:3000`
+
+### Configuration Options
+
+#### Environment Variables
+
+- **`WEBUI_AUTH=False`**: Disables authentication for single-user mode
+- **`OLLAMA_BASE_URL`**: Specifies the Ollama server URL (include port if non-standard)
+- **`WEBUI_NAME`**: Customize the web interface title
+- **`DEFAULT_MODELS`**: Set default models to load
+
+#### Important Docker Flags
+
+- **Volume Mapping (`-v open-webui:/app/backend/data`)**: Ensures persistent storage of conversations, settings, and user data
+- **Port Mapping (`-p 3000:8080`)**: Exposes Open WebUI on port 3000 of your host machine
+- **Restart Policy (`--restart always`)**: Automatically restarts the container if it stops
+
+### Multi-User Setup
+
+For multi-user environments, remove the `WEBUI_AUTH=False` flag:
+
+```bash
+docker run -d \
+  -p 3000:8080 \
+  -e OLLAMA_BASE_URL=https://192.168.1.11:11434 \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  ghcr.io/open-webui/open-webui:main
+```
+
+**Important Notes:**
+- The **first account created** becomes the Administrator
+- Subsequent users start with **Pending status** and require admin approval
+- You **cannot switch** between single-user and multi-user mode after initial setup
+
+### Updating Open WebUI
+
+#### Option 1: Manual Update
+
+```bash
+# Stop and remove current container
+docker rm -f open-webui
+
+# Pull latest version
+docker pull ghcr.io/open-webui/open-webui:main
+
+# Restart with same configuration
+docker run -d \
+  -p 3000:8080 \
+  -e WEBUI_AUTH=False \
+  -e OLLAMA_BASE_URL=https://192.168.1.11:11434 \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  ghcr.io/open-webui/open-webui:main
+```
+
+#### Option 2: Using Watchtower (Automated)
+
+```bash
+# Install Watchtower for automatic updates
+docker run --rm \
+  --volume /var/run/docker.sock:/var/run/docker.sock \
+  containrrr/watchtower \
+  --run-once open-webui
+```
+
+### Troubleshooting Open WebUI
+
+#### Connection Issues
+
+1. **Verify Ollama server is accessible:**
+   ```bash
+   curl http://192.168.1.11:11434
+   ```
+
+2. **Check Open WebUI container logs:**
+   ```bash
+   docker logs open-webui
+   ```
+
+3. **Test network connectivity from container:**
+   ```bash
+   docker exec open-webui curl http://192.168.1.11:11434
+   ```
+
+#### Common Issues
+
+**"Failed to connect to Ollama":**
+- Verify the `OLLAMA_BASE_URL` is correct
+- Ensure Ollama is running with `OLLAMA_HOST=0.0.0.0` if on a different machine
+- Check firewall rules allow access to port 11434
+
+**"Container won't start":**
+- Check if port 3000 is already in use: `netstat -tulpn | grep 3000`
+- Verify Docker has sufficient resources
+- Check container logs for specific error messages
+
+**"Data not persisting":**
+- Ensure the volume is properly mounted: `docker volume ls | grep open-webui`
+- Verify the volume path in the docker run command
+
+### Integration with Dev Container
+
+To use Open WebUI alongside your dev container setup:
+
+1. **Start Ollama with network access:**
+   ```bash
+   OLLAMA_HOST=0.0.0.0 ollama serve &
+   ```
+
+2. **Deploy Open WebUI pointing to your host:**
+   ```bash
+   docker run -d \
+     -p 3000:8080 \
+     -e WEBUI_AUTH=False \
+     -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
+     -v open-webui:/app/backend/data \
+     --name open-webui \
+     --restart always \
+     ghcr.io/open-webui/open-webui:main
+   ```
+
+3. **Access both interfaces:**
+   - **Jupyter Lab**: Available in the dev container
+   - **Open WebUI**: Available at [http://localhost:3000](http://localhost:3000)
+
+This setup provides both programmatic access (via Jupyter) and a user-friendly chat interface for your Ollama models.
+
 ## Configuration Details
 
 ### Network Configuration
