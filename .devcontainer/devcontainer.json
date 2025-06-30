@@ -1,6 +1,9 @@
 {
   "name": "ollama-genai-env",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  // "features": {
+  //   "ghcr.io/devcontainers/features/dotenv:1": {}
+  // },
   "forwardPorts": [11434],
   "remoteEnv": {
     "OLLAMA_API_BASE_URL": "http://host.docker.internal:11434"
