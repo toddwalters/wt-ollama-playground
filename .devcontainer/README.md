@@ -55,14 +55,26 @@ Before starting the dev container, ensure Ollama is installed and running on you
 - **Windows**: Download from [ollama.ai](https://ollama.ai)
 
 #### Start Ollama Service
+
+**Standard Setup (Dev Container Compatible):**
 ```bash
 ollama serve
 ```
 
-The service should be accessible at `http://localhost:11434`. You can verify it's running by visiting this URL in your browser or running:
+This default setup works perfectly with dev containers, as they can access the host's Ollama service via `http://host.docker.internal:11434`.
+
+**For Network Access (Optional):**
+If you want to allow other clients on your network to access Ollama (e.g., other computers, mobile devices, or remote development environments), start Ollama with all interfaces binding:
+```bash
+OLLAMA_HOST=0.0.0.0 ollama serve &
+```
+
+This runs Ollama in the background and allows connections from any network interface. The service will be accessible at `http://localhost:11434` locally and `http://YOUR_IP:11434` from other devices on your network. You can verify it's running by visiting this URL in your browser or running:
 ```bash
 curl http://localhost:11434
 ```
+
+**Security Note:** When using `OLLAMA_HOST=0.0.0.0`, Ollama will accept connections from any network interface, making it accessible to other devices on your network. For security, consider using firewall rules to restrict access (see Security Configuration section below).
 
 #### Download Models (Optional)
 To download models for use in the dev container:
@@ -76,6 +88,103 @@ ollama pull codellama
 # List available models
 ollama list
 ```
+
+## Security Configuration
+
+### macOS Firewall Configuration with pf (Packet Filter)
+
+When running Ollama with `OLLAMA_HOST=0.0.0.0` to allow network access, it's important to restrict which devices can connect for security. On macOS, you can use the built-in packet filter (pf) to limit which IP addresses can access the Ollama API port.
+
+#### Create pf Rules
+
+1. **Create a pf configuration file** for Ollama restrictions:
+```bash
+sudo nano /etc/pf.anchors/ollama.rules
+```
+
+2. **Add rules to restrict access** (example configuration):
+```bash
+# Block all external access to Ollama port 11434 by default
+block in quick on en0 proto tcp from any to any port 11434
+
+# Allow localhost access
+pass in quick on lo0 proto tcp from 127.0.0.1 to any port 11434
+
+# Allow Docker bridge network (adjust IP range as needed)
+pass in quick proto tcp from 172.16.0.0/12 to any port 11434
+pass in quick proto tcp from 192.168.0.0/16 to any port 11434
+
+# Allow specific trusted IP addresses (uncomment and modify as needed)
+# pass in quick proto tcp from 192.168.1.100 to any port 11434
+# pass in quick proto tcp from 10.0.0.0/8 to any port 11434
+```
+
+3. **Load the pf rules**:
+```bash
+# Enable pf if not already enabled
+sudo pfctl -e
+
+# Load the Ollama-specific rules
+sudo pfctl -a ollama -f /etc/pf.anchors/ollama.rules
+```
+
+4. **Verify the rules are active**:
+```bash
+sudo pfctl -a ollama -s rules
+```
+
+#### Make Rules Persistent
+
+To make the firewall rules persistent across reboots:
+
+1. **Edit the main pf configuration**:
+```bash
+sudo nano /etc/pf.conf
+```
+
+2. **Add the anchor reference** (add this line near other anchor declarations):
+```bash
+load anchor "ollama" from "/etc/pf.anchors/ollama.rules"
+```
+
+3. **Reload pf configuration**:
+```bash
+sudo pfctl -f /etc/pf.conf
+```
+
+#### Managing pf Rules
+
+**View current rules:**
+```bash
+sudo pfctl -a ollama -s rules
+```
+
+**Temporarily disable Ollama rules:**
+```bash
+sudo pfctl -a ollama -F rules
+```
+
+**Re-enable Ollama rules:**
+```bash
+sudo pfctl -a ollama -f /etc/pf.anchors/ollama.rules
+```
+
+**Disable pf entirely (not recommended):**
+```bash
+sudo pfctl -d
+```
+
+#### Alternative: Using macOS Application Firewall
+
+For a simpler approach, you can use the macOS Application Firewall:
+
+1. **Open System Preferences** → Security & Privacy → Firewall
+2. **Enable the firewall** if not already enabled
+3. **Click "Firewall Options"**
+4. **Add Ollama** to the list and set it to "Allow incoming connections"
+5. **Enable "Block all incoming connections"** for other applications
+
+This approach is less granular but easier to manage for basic security needs.
 
 ## Configuration Details
 
@@ -132,9 +241,36 @@ jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root
 
 ### Ollama Connection Issues
 If you can't connect to Ollama from the container:
-1. Ensure Ollama is running on the host: `ollama serve`
-2. Check if port 11434 is accessible: `curl http://localhost:11434`
-3. On some systems, you may need to bind Ollama to all interfaces: `OLLAMA_HOST=0.0.0.0 ollama serve`
+
+1. **Ensure Ollama is running on the host:**
+   ```bash
+   # Standard setup (works with dev containers)
+   ollama serve
+   
+   # Or for network access
+   OLLAMA_HOST=0.0.0.0 ollama serve &
+   ```
+
+2. **Check if port 11434 is accessible:**
+   ```bash
+   curl http://localhost:11434
+   ```
+
+3. **Verify Docker can reach the host:**
+   From inside the dev container, test the connection:
+   ```bash
+   curl http://host.docker.internal:11434
+   ```
+
+4. **Check firewall settings:**
+   - Ensure your firewall allows connections to port 11434
+   - If using pf rules, verify they allow Docker bridge networks
+   - Test with firewall temporarily disabled to isolate the issue
+
+5. **Docker networking issues:**
+   - On some systems, `host.docker.internal` may not work
+   - Try using your host machine's IP address instead
+   - Check Docker's network configuration
 
 ### Container Build Issues
 If the container fails to build:
